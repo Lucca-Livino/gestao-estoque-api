@@ -39,7 +39,7 @@ class FornecedorController {
     );
   }
 
-  // PUT /fornecedores/:id
+  // PATCH /fornecedores/:id
   async atualizar(req, res) {
     const { id } = req.params;
     const data = await this.service.atualizar(id, req.body);
@@ -51,18 +51,7 @@ class FornecedorController {
     );
   }
 
-  // DELETE /fornecedores/:id
-  async deletar(req, res) {
-    const { id } = req.params;
-    const data = await this.service.deletar(id);
-    return CommonResponse.success(
-      res,
-      data,
-      HttpStatusCodes.OK.code,
-      "Fornecedor eliminado com sucesso."
-    );
-  }
-
+  // PATCH /fornecedores/desativar/:id
   async desativarFornecedor(req, res) {
     console.log("Estou no desativarFornecedor em FornecedorController");
     
@@ -88,6 +77,8 @@ class FornecedorController {
     );
   }
 
+  // PATCH /fornecedores/reativar/:id
+
   async reativarFornecedor(req, res) {
     console.log("Estou no reativarFornecedor em FornecedorController");
     
@@ -112,5 +103,18 @@ class FornecedorController {
       "fornecedor reativado com sucesso."
     );
   }
+  // DELETE /fornecedores/:id
+  async deletar(req, res) {
+    const { id } = req.params;
+    const data = await this.service.deletar(id);
+    return CommonResponse.success(
+      res,
+      data,
+      HttpStatusCodes.OK.code,
+      "Fornecedor eliminado com sucesso."
+    );
+  }
+
+  
 }
 export default FornecedorController;
