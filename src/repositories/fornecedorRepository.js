@@ -1,3 +1,5 @@
+// src/repositories/fornecedorRepository.js
+
 import Fornecedor from "../models/Fornecedor.js";
 import FornecedorFilterBuilder from "./filters/FornecedorFilterBuilder.js";
 import CustomError from "../utils/helpers/CustomError.js";

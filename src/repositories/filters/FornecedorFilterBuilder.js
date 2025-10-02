@@ -1,50 +1,54 @@
 // src/utils/FornecedorFilterBuilder.js
 
 class FornecedorFilterBuilder {
-    constructor() {
-        this.filtros = {};
-    }
+  constructor() {
+    this.filtros = {};
+  }
 
-    // Filtro por nome do fornecedor (busca parcial e case-insensitive)
-    comNome(nome) {
-        if (nome) {
-            this.filtros.nome_fornecedor = { $regex: nome, $options: 'i' };
-        }
-        return this;
+  // Filtro por nome do fornecedor (busca parcial e case-insensitive)
+  comNome(nome) {
+    if (nome) {
+      this.filtros.nome_fornecedor = { $regex: nome, $options: "i" };
     }
+    return this;
+  }
 
-    // Filtro por CNPJ (busca exata)
-    comCNPJ(cnpj) {
-        if (cnpj) {
-            this.filtros.cnpj = cnpj;
-        }
-        return this;
+  // Filtro por CNPJ (busca exata, sem máscara)
+  comCNPJ(cnpj) {
+    if (cnpj) {
+      const cnpjLimpo = cnpj.replace(/[^\d]/g, "");
+      this.filtros.cnpj = cnpjLimpo;
     }
+    return this;
+  }
+  
+  // Filtro por status (booleano)
+  comStatus(status) {
+    if (status !== undefined && status !== null) {
+      this.filtros.status = String(status).toLowerCase() === 'true';
+    }
+    return this;
+  }
 
-    // Filtro por e-mail de um dos endereços
-    comEmail(email) {
-        if (email) {
-            this.filtros['endereco.email'] = { $regex: email, $options: 'i' };
-        }
-        return this;
+  // Filtro por cidade em qualquer um dos endereços
+  comCidade(cidade) {
+    if (cidade) {
+      this.filtros['endereco.cidade'] = { $regex: cidade, $options: 'i' };
     }
+    return this;
+  }
 
-    // Filtro por telefone de um dos endereços
-    comTelefone(telefone) {
-        if (telefone) {
-            this.filtros['endereco.telefone'] = { $regex: telefone, $options: 'i' };
-        }
-        return this;
+  // Filtro por estado em qualquer um dos endereços
+  comEstado(estado) {
+    if (estado) {
+      this.filtros['endereco.estado'] = { $regex: `^${estado}$`, $options: 'i' };
     }
+    return this;
+  }
 
-    // Método para escapar regex (evita erros em entradas de usuário)
-    escapeRegex(texto) {
-        return texto.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
-    }
-
-    build() {
-        return this.filtros;
-    }
+  build() {
+    return this.filtros;
+  }
 }
 
 export default FornecedorFilterBuilder;
