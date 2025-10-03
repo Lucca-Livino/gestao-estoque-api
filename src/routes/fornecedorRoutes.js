@@ -25,10 +25,10 @@ router
     asyncWrapper(fornecedorController.criar.bind(fornecedorController))
   )
   
-  .patch(
+  .put(
     "/:id",
     LogMiddleware.log("ATUALIZACAO_FORNECEDOR"),
-    asyncWrapper(fornecedorController.atualizar.bind(fornecedorController))
+    asyncWrapper(fornecedorController.atualizarCompleto.bind(fornecedorController))
   )
   
   .delete(
@@ -41,15 +41,7 @@ router
     "/desativar/:id",
     LogMiddleware.log("DESATIVACAO_FORNECEDOR"),
     asyncWrapper(
-      fornecedorController.desativarFornecedor.bind(fornecedorController)
-    )
-  )
-  
-  .patch(
-    "/reativar/:id",
-    LogMiddleware.log("REATIVACAO_FORNECEDOR"),
-    asyncWrapper(
-      fornecedorController.reativarFornecedor.bind(fornecedorController)
+      fornecedorController.atualizarParcial.bind(fornecedorController)
     )
   );
 

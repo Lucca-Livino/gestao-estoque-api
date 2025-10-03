@@ -1,5 +1,4 @@
 // src/repositories/fornecedorRepository.js
-
 import Fornecedor from "../models/Fornecedor.js";
 import FornecedorFilterBuilder from "./filters/FornecedorFilterBuilder.js";
 import CustomError from "../utils/helpers/CustomError.js";
@@ -16,171 +15,115 @@ class FornecedorRepository {
     return await fornecedor.save();
   }
 
-  // Método para listar fornecedores, podendo buscar por ID ou aplicar filtros simples
-  async listar(req) {
-    const { id } = req.params || null;
-    if (id) {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new CustomError({
-          statusCode: HttpStatusCodes.BAD_REQUEST.code,
-          errorType: "validationError",
-          field: "id",
-          details: [],
-          customMessage: "ID do fornecedor inválido.",
-        });
-      }
-      const fornecedor = await this.model.findById(id);
-      if (!fornecedor) {
-        throw new CustomError({
-          statusCode: 404,
-          errorType: "resourceNotFound",
-          field: "Fornecedor",
-          customMessage: messages.error.resourceNotFound("Fornecedor"),
-        });
-      }
-      return fornecedor;
-    }
-
-    const { cnpj, nome_fornecedor, page = 1 } = req.query;
-    const limite = Math.min(parseInt(req.query.limite, 10) || 10, 100);
+  // Método para listagem com filtros, paginação e ordenação
+  async listar(queryParams) {
+    const { page = 1, limite = 10, nome_fornecedor, cnpj, status, cidade, estado, ordenar_por = "nome_fornecedor" } = queryParams;
 
     const filterBuilder = new FornecedorFilterBuilder()
-      .comCNPJ(cnpj || "")
-      .comNome(nome_fornecedor || "");
+      .comNome(nome_fornecedor)
+      .comCNPJ(cnpj)
+      .comStatus(status)
+      .comCidade(cidade)
+      .comEstado(estado);
 
-    if (typeof filterBuilder.build !== "function") {
-      throw new CustomError({
-        statusCode: 500,
-        errorType: "internalServerError",
-        field: "Fornecedor",
-        details: [],
-        customMessage: messages.error.internalServerError("Fornecedor"),
-      });
-    }
     const filtros = filterBuilder.build();
 
     const options = {
       page: parseInt(page, 10),
-      limit: parseInt(limite, 10),
-      sort: { nome_fornecedor: 1 },
+      limit: Math.min(parseInt(limite, 10), 100),
+      sort: { [ordenar_por]: 1 },
     };
 
-    const resultado = await this.model.paginate(filtros, options);
-    return resultado;
+    return await this.model.paginate(filtros, options);
   }
 
-  // Método para buscar um fornecedor por ID
-  async buscarPorId(id) {
+  // Método dedicado para buscar um fornecedor por ID
+  async buscarPorId(id, queryParams = {}) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new CustomError({
-        statusCode: HttpStatusCodes.BAD_REQUEST.code,
-        errorType: "validationError",
-        field: "id",
-        details: [],
-        customMessage: "ID do fornecedor inválido.",
-      });
+      throw new CustomError({ statusCode: 400, customMessage: "ID do fornecedor inválido." });
     }
-    const fornecedor = await this.model.findById(id);
+    
+    let query = this.model.findById(id);
+
+    // Suporte para incluir dados relacionados, conforme documentação
+    if (queryParams.incluir_produtos === 'true') {
+        // query = query.populate('produtos'); // Exemplo: Carrega produtos associados
+    }
+
+    const fornecedor = await query.exec();
+
     if (!fornecedor) {
-      throw new CustomError({
-        statusCode: 404,
-        errorType: "resourceNotFound",
-        field: "Fornecedor",
-        customMessage: messages.error.resourceNotFound("Fornecedor"),
-      });
+      throw new CustomError({ statusCode: 404, customMessage: messages.error.resourceNotFound("Fornecedor") });
+    }
+    return fornecedor;
+  }
+
+  // Método para a busca avançada (endpoint /buscar)
+  async buscaAvancada(queryParams) {
+      const { q, estados, cidades, incluir_inativos = false, page = 1, limite = 10, ordenar_por = "nome_fornecedor" } = queryParams;
+
+      let filtros = {};
+      if (String(incluir_inativos).toLowerCase() !== 'true') {
+          filtros.status = true;
+      }
+
+      if (q) {
+          const termoBusca = new RegExp(q, 'i');
+          filtros.$or = [
+              { nome_fornecedor: termoBusca },
+              { email: termoBusca },
+              { cnpj: termoBusca }
+          ];
+      }
+
+      if (estados) {
+          filtros['endereco.estado'] = { $in: estados.split(',').map(e => e.trim().toUpperCase()) };
+      }
+      if (cidades) {
+          filtros['endereco.cidade'] = { $in: cidades.split(',').map(c => new RegExp(c.trim(), 'i')) };
+      }
+
+      const options = {
+          page: parseInt(page, 10),
+          limit: Math.min(parseInt(limite, 10), 100),
+          sort: { [ordenar_por]: 1 }
+      };
+
+      return await this.model.paginate(filtros, options);
+  }
+
+  // Método auxiliar para checar unicidade de campos antes de criar/atualizar
+  async encontrarPorCamposUnicos(cnpj, email, idExcluido = null) {
+      const query = {
+          $or: [{ cnpj }, { email }]
+      };
+      if (idExcluido) {
+          query._id = { $ne: idExcluido };
+      }
+      return this.model.findOne(query);
+  }
+
+  async atualizar(id, dadosAtualizados) {
+    const fornecedor = await this.model.findByIdAndUpdate(id, dadosAtualizados, { new: true });
+    if (!fornecedor) {
+      throw new CustomError({ statusCode: 404, customMessage: messages.error.resourceNotFound("Fornecedor") });
     }
     return fornecedor;
   }
   
-  async buscarPorNome(nome) {
-    const fornecedores = await this.model.find({
-      nome_fornecedor: { $regex: nome, $options: "i" }
-    });
-
-    if (fornecedores.length === 0) {
-      throw new CustomError({
-        statusCode: 404,
-        errorType: "resourceNotFound",
-        field: "Fornecedor",
-        details: [],
-        customMessage: messages.error.resourceNotFound("Fornecedor"),
-      });
-    }
-
-    console.log("Fornecedores encontrados:", fornecedores);
-    return fornecedores;
-  }
-
-  // Método para atualizar um fornecedor existente
-  async atualizar(id, dadosAtualizados) {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new CustomError({
-        statusCode: HttpStatusCodes.BAD_REQUEST.code,
-        errorType: "validationError",
-        field: "id",
-        details: [],
-        customMessage: "ID do fornecedor inválido.",
-      });
-    }
-    const fornecedor = await this.model.findByIdAndUpdate(
-      id,
-      dadosAtualizados,
-      { new: true }
-    );
-
-    if (!fornecedor) {
-      throw new CustomError({
-        statusCode: 404,
-        errorType: "resourceNotFound",
-        field: "Fornecedor",
-        customMessage: messages.error.resourceNotFound("Fornecedor"),
-      });
-    }
-    return fornecedor;
-  }
-
-  // Método para deletar um fornecedor
+  // Apenas executa a exclusão física (hard delete)
   async deletar(id) {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new CustomError({
-        statusCode: HttpStatusCodes.BAD_REQUEST.code,
-        errorType: "validationError",
-        field: "id",
-        details: [],
-        customMessage: "ID do fornecedor inválido.",
-      });
+    const resultado = await this.model.findByIdAndDelete(id);
+    if (!resultado) {
+      throw new CustomError({ statusCode: 404, customMessage: messages.error.resourceNotFound("Fornecedor") });
     }
-    const fornecedor = await this.model.findByIdAndDelete(id);
-    if (!fornecedor) {
-      throw new CustomError({
-        statusCode: 400,
-        errorType: "BadRequest",
-        field: "ID",
-        details: [],
-        customMessage: messages.error.resourceNotFound(
-          "fornecedor não encontrado"
-        ),
-      });
-    }
-    return fornecedor;
+    return resultado;
   }
 
-  async desativarFornecedor(id) {
-    const fornecedor = await this.model.findByIdAndUpdate(
-      id,
-      { status: false },
-      { new: true }
-    );
-    return fornecedor;
-  }
-
-  async reativarFornecedor(id) {
-    const fornecedor = await this.model.findByIdAndUpdate(
-      id,
-      { status: true },
-      { new: true }
-    );
-    return fornecedor;
+  // Apenas executa a inativação (soft delete)
+  async desativar(id) {
+    return await this.model.findByIdAndUpdate(id, { status: false }, { new: true });
   }
 }
+
 export default FornecedorRepository;

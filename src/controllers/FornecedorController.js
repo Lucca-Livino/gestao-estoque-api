@@ -1,3 +1,5 @@
+// src/controllers/FornecedorController.js
+
 import FornecedorService from "../services/fornecedorService.js";
 import CommonResponse from "../utils/helpers/CommonResponse.js";
 import HttpStatusCodes from "../utils/helpers/HttpStatusCodes.js";
