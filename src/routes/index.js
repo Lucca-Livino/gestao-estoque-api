@@ -36,7 +36,7 @@ const routes = (app) => {
     rotasProdutos
   );
   app.use(
-    "/api/fornecedores",
+    "/fornecedores",
     express.json(),
     authMiddleware,
     authPermission,
