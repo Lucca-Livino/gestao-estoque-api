@@ -227,16 +227,6 @@ const fornecedoresRoutes = {
                         type: "string",
                         example: "60d5ecb54b24a12a5c8e4f1b"
                     }
-                },
-                {
-                    name: "incluir_produtos",
-                    in: "query",
-                    description: "Incluir lista de produtos fornecidos",
-                    schema: {
-                        type: "boolean",
-                        default: false,
-                        example: true
-                    }
                 }
             ],
             responses: {
