@@ -9,6 +9,7 @@ class Usuario {
         nome_usuario: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         matricula: { type: String, required: true, unique: true },
+        foto_perfil_url: { type: String, default: null }, // NOVO CAMPO PARA A FOTO DE PERFIL
         senha: { type: String, required: false, select: false }, // Não obrigatório inicialmente
         perfil: {
           type: String,
