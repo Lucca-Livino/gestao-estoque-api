@@ -1,3 +1,5 @@
+// src/controllers/UsuarioController.js
+
 import UsuarioService from "../services/usuarioService.js";
 import EmailService from "../services/EmailService.js";
 import { CommonResponse, CustomError, HttpStatusCodes } from "../utils/helpers/index.js";
@@ -10,7 +12,7 @@ class UsuarioController {
         this.service = new UsuarioService();
     }
 
-    // Função utilitária para validação com erro customizado
+    // Função utilitária para validação
     validateId(id, fieldName = 'id', action = 'processar') {
         if (!id) {
             throw new CustomError({
@@ -61,6 +63,7 @@ class UsuarioController {
         const { id } = req.params || {};
 
         UsuarioIdSchema.parse(id);
+
         const data = await this.service.buscarUsuarioPorID(id);
         return CommonResponse.success(res, data, 200, 'Usuário encontrado com sucesso.');
     }
@@ -101,7 +104,7 @@ class UsuarioController {
 
             // Preparar dados do usuário sem senha
             parsedData.senha = null;
-            parsedData.ativo = false; // Usuário inativo até definir senha
+            parsedData.ativo = false;
             parsedData.codigo_recuperacao = codigoSeguranca;
             parsedData.data_expiracao_codigo = dataExpiracao;
             parsedData.senha_definida = false;
@@ -127,8 +130,8 @@ class UsuarioController {
                 : `Usuário cadastrado com sucesso. Código de segurança: ${codigoSeguranca}`;
 
             const responseInstructions = emailResult.sentViaEmail
-                ? `O usuário deve verificar o email ${data.email} para encontrar o código de acesso e a matrícula ${data.matricula}. Código também disponível aqui para referência.`
-                : `O usuário deve usar este código na endpoint '/auth/redefinir-senha/codigo' para definir sua senha. Código válido por 24 horas.`;
+                ? `O usuário deve verificar o email ${data.email} para encontrar o código de acesso e a matrícula ${data.matricula}.`
+                : `O usuário deve usar este código na rota '/auth/redefinir-senha/codigo'. Código válido por 24 horas.`;
 
             return CommonResponse.created(
                 res,
@@ -167,18 +170,17 @@ class UsuarioController {
     async atualizarUsuario(req, res) {
         console.log('Estou no atualizarUsuario em UsuarioController');
 
-        const { id } = req.params;
-        if (!id) {
+        const { matricula } = req.params;
+        if (!matricula) {
             throw new CustomError({
                 statusCode: HttpStatusCodes.BAD_REQUEST.code,
                 errorType: 'validationError',
-                field: 'id',
-                details: [],
-                customMessage: 'ID do usuário é obrigatório.'
+                field: 'matricula',
+                customMessage: 'Matrícula do usuário é obrigatória.'
             });
         }
 
-        UsuarioIdSchema.parse(id);
+        UsuarioMatriculaSchema.parse({ matricula });
 
         const dadosAtualizacao = req.body;
         if (Object.keys(dadosAtualizacao).length === 0) {
@@ -192,8 +194,37 @@ class UsuarioController {
         }
 
         await UsuarioUpdateSchema.parseAsync(dadosAtualizacao);
-        const usuarioAtualizado = await this.service.atualizarUsuario(id, dadosAtualizacao);
+        const usuarioAtualizado = await this.service.atualizarUsuario(matricula, dadosAtualizacao);
+
         return CommonResponse.success(res, usuarioAtualizado, 200, 'Usuário atualizado com sucesso.');
+    }
+
+    // upload foto de perfil
+    async atualizarFotoPerfil(req, res) {
+        console.log('Estou no atualizarFotoPerfil em UsuarioController');
+        const { matricula } = req.params;
+
+        if (!req.file) {
+            throw new CustomError({
+                statusCode: HttpStatusCodes.BAD_REQUEST.code,
+                errorType: 'validationError',
+                field: 'fotoPerfil',
+                customMessage: 'Nenhum arquivo de imagem foi enviado ou o arquivo é inválido.'
+            });
+        }
+
+        const urlRelativa = req.file.path.replace(/\\/g, '/').split('public')[1];
+        const fotoUrl = `/public${urlRelativa}`;
+
+        const usuarioAtualizado = await this.service.atualizarFotoPerfil(matricula, fotoUrl, req.file.path);
+
+        LogMiddleware.logCriticalEvent(req.userId, 'FOTO_PERFIL_ATUALIZADA', {
+            usuario_afetado_matricula: matricula,
+            novo_caminho: fotoUrl,
+            atualizado_por_matricula: req.userMatricula
+        }, req);
+
+        return CommonResponse.success(res, usuarioAtualizado, 200, 'Foto de perfil atualizada com sucesso.');
     }
 
     async deletarUsuario(req, res) {
@@ -215,67 +246,21 @@ class UsuarioController {
     }
 
     async desativarUsuario(req, res) {
-        console.log('Estou no desativarUsusario em UsuarioController');
+        console.log('Estou no desativarUsuario em UsuarioController');
+        const { matricula } = req.params;
+        UsuarioMatriculaSchema.parse({ matricula });
 
-        const { id } = req.params || {};
-        this.validateId(id, 'id', 'desativar');
-
-        const data = await this.service.desativarUsuario(id);
-        return CommonResponse.success(res, data, 200, 'Usuario desativado com sucesso.');
+        const data = await this.service.desativarUsuario(matricula);
+        return CommonResponse.success(res, data, 200, 'Usuário desativado com sucesso.');
     }
 
     async reativarUsuario(req, res) {
-        console.log('Estou no reativarUsusario em UsuarioController');
+        console.log('Estou no reativarUsuario em UsuarioController');
+        const { matricula } = req.params;
+        UsuarioMatriculaSchema.parse({ matricula });
 
-        const { id } = req.params || {};
-        this.validateId(id, 'id', 'reativar');
-
-        const data = await this.service.reativarUsuario(id);
-        return CommonResponse.success(res, data, 200, 'Usuario reativado com sucesso.');
-    }
-
-    async criarComSenha(req, res) {
-        const { nome, email, senha, perfil } = req.body;
-
-        // Validar dados
-        if (!nome || !email || !senha) {
-            return res.status(400).json({
-                message: 'Nome, email e senha são obrigatórios',
-                type: 'validationError'
-            });
-        }
-
-        // Verificar se o email já existe
-        const emailExiste = await this.service.verificarEmailExistente(email);
-        if (emailExiste) {
-            return res.status(400).json({
-                message: 'Este email já está em uso',
-                type: 'validationError'
-            });
-        }
-
-        // Criar usuário
-        const usuario = await this.service.criarUsuario({
-            nome,
-            email,
-            senha,
-            perfil: perfil || 'estoquista', // Perfil padrão se não for especificado
-            ativo: true
-        });
-
-        // Remover a senha do objeto de resposta
-        const usuarioSemSenha = {
-            id: usuario._id,
-            nome: usuario.nome,
-            email: usuario.email,
-            perfil: usuario.perfil,
-            ativo: usuario.ativo
-        };
-
-        return res.status(201).json({
-            message: 'Usuário criado com sucesso',
-            usuario: usuarioSemSenha
-        });
+        const data = await this.service.reativarUsuario(matricula);
+        return CommonResponse.success(res, data, 200, 'Usuário reativado com sucesso.');
     }
 
     /**
@@ -407,7 +392,7 @@ class UsuarioController {
         LogMiddleware.logCriticalEvent(req.userId, 'PERMISSAO_INDIVIDUAL_REMOVIDA', {
             usuario_id: id,
             permissao_removida: {
-                rota: rota,
+                rota,
                 dominio: dominio || 'localhost'
             },
             removido_por: req.userMatricula

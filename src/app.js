@@ -9,6 +9,9 @@ import DbConect from './config/DbConnect.js';
 import errorHandler from './utils/helpers/errorHandler.js';
 // import logger from './utils/logger.js';
 import CommonResponse from './utils/helpers/CommonResponse.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 
 const app = express();
 
@@ -19,7 +22,6 @@ const app = express();
 //     abortOnLimit: true, // Aborta a requisição se o limite for excedido
 //     responseOnLimit: 'Tamanho do arquivo excede o limite permitido.' // Mensagem de resposta quando o limite é excedido
 // }));
-
 
 // Conectando ao banco de dados
 await DbConect.conectar();
@@ -38,10 +40,9 @@ app.use((req, res, next) => {
 app.use(helmet());
 
 // Habilitando CORS
-// app.use(cors());
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5173'],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'], // Adicionado PUT
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -53,6 +54,12 @@ app.use(express.json());
 
 // Habilitando o uso de urlencoded pelo express
 app.use(express.urlencoded({ extended: true }));
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// A pasta 'public' na raiz do projeto será servida estaticamente
+app.use('/public', express.static(path.join(__dirname, '..', 'public')));
 
 // Passando para o arquivo de rotas o app
 routes(app);
@@ -77,8 +84,7 @@ app.use((err, req, res, next) => {
     res.status(err.statusCode || 500).json({
       message: err.message || "Erro interno do servidor"
     });
-  });
-
+});
 
 // Listener para erros não tratados (opcional, mas recomendado)
 process.on('unhandledRejection', (reason, promise) => {
