@@ -292,6 +292,77 @@ const usuariosRoutes = {
     },
   },
 
+    "/api/usuarios/{matricula}/foto-perfil": {
+    patch: {
+      tags: ["Usuários"],
+      summary: "Atualizar foto de perfil do usuário",
+      description: `
+        Atualiza a foto de perfil de um usuário específico usando sua matrícula.
+        A imagem deve ser enviada como \`multipart/form-data\`.
+        
+        **Processo:**
+        1. O arquivo é enviado no campo \`fotoPerfil\`.
+        2. O servidor salva a imagem em \`public/uploads/fotos_perfil\`.
+        3. A URL da imagem (ex: /public/uploads/fotos_perfil/...) é salva no banco de dados.
+        4. Se uma foto antiga existir, ela é removida do servidor.
+        
+        **Restrições:**
+        - Tamanho máximo: 5MB
+        - Formatos permitidos: jpeg, jpg, png, gif
+      `,
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          name: "matricula",
+          in: "path",
+          required: true,
+          description: "Matrícula do usuário",
+          schema: { type: "string", example: "ADM0001" },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          // O Content-Type é multipart/form-data para upload de arquivos
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              properties: {
+                // O nome 'fotoPerfil' deve bater com o `upload.single('fotoPerfil')` no middleware
+                fotoPerfil: {
+                  type: "string",
+                  format: "binary", // Indica que é um arquivo
+                  description: "Arquivo de imagem para a foto de perfil (jpeg, jpg, png, gif)."
+                }
+              },
+              required: ["fotoPerfil"] // O arquivo é obrigatório
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: "Foto de perfil atualizada com sucesso",
+          content: {
+            "application/json": {
+              // Retorna o usuário atualizado, incluindo a nova 'foto_perfil_url'
+              schema: { $ref: "#/components/schemas/UsuarioResponse" }
+            }
+          }
+        },
+        400: {
+          description: "Nenhum arquivo enviado, formato de arquivo inválido ou matrícula não encontrada",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+            }
+          }
+        },
+        ...commonSchemas.CommonResponses
+      }
+    }
+    },
+
   "/api/usuarios/busca/{matricula}": {
     get: {
       tags: ["Usuários"],
