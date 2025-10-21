@@ -57,6 +57,59 @@ class UsuarioService {
         return usuarioAtualizado;
     }
 
+
+      /**
+     * Atualiza a foto de perfil do usuário.
+     * @param {string} matricula - Matrícula do usuário.
+     * @param {string} novaUrl - A URL relativa para acessar a imagem (ex: /public/uploads/...).
+     * @param {string} novoCaminhoAbsoluto - O caminho físico do arquivo no disco (ex: public/uploads/...).
+     * @returns {Object} - O usuário atualizado.
+     */
+    async atualizarFotoPerfil(matricula, novaUrl, novoCaminhoAbsoluto) {
+        console.log('Service - atualizando foto de perfil para matrícula:', matricula);
+        
+        // 1. Busca o usuário para obter o caminho da imagem antiga
+        const usuario = await this.repository.buscarPorMatricula(matricula);
+        const urlAntiga = usuario.foto_perfil_url;
+
+        // 2. Atualiza o banco de dados com a nova URL
+        const dadosAtualizacao = { 
+            foto_perfil_url: novaUrl,
+            data_ultima_atualizacao: new Date() 
+        };
+        const usuarioAtualizado = await this.repository.atualizarUsuario(matricula, dadosAtualizacao);
+
+        // 3. Se a atualização no banco deu certo e existia uma foto antiga, delete-a do servidor
+        if (urlAntiga) {
+            try {
+                // Converte a URL relativa (ex: /public/...) para um caminho de arquivo (ex: public/...)
+                const caminhoArquivoAntigo = path.join(path.resolve(), urlAntiga.substring(1));
+                
+                // Verifica se o caminho antigo é diferente do novo antes de deletar
+                // e se o caminho antigo não é nulo ou uma string vazia
+                if (caminhoArquivoAntigo && caminhoArquivoAntigo !== path.resolve(novoCaminhoAbsoluto)) {
+                    fs.unlink(caminhoArquivoAntigo, (err) => {
+                        if (err) {
+                            // Se o arquivo não existir (ENOENT), não é um erro crítico
+                            if (err.code !== 'ENOENT') {
+                                console.error('Erro ao deletar a foto de perfil antiga:', err);
+                            } else {
+                                console.log('Foto de perfil antiga não encontrada no disco, pulando exclusão:', caminhoArquivoAntigo);
+                            }
+                        } else {
+                            console.log('Foto de perfil antiga deletada com sucesso:', caminhoArquivoAntigo);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao processar caminho da foto antiga para exclusão:', error);
+            }
+        }
+        
+        return usuarioAtualizado;
+    }
+
+
     async buscarUsuarioPorID(id) {
         console.log('Estou no buscarUsuarioPorID em UsuarioService');
 
