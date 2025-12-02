@@ -47,7 +47,7 @@ app.use(helmet({
 // Habilitando CORS
 // app.use(cors());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -65,7 +65,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Servindo arquivos estáticos da pasta public
 const publicPath = path.join(__dirname, '../public');
-console.log(`📁 Servindo arquivos estáticos de: ${publicPath}`);
+console.log(`Servindo arquivos estáticos de: ${publicPath}`);
 
 // Middleware para adicionar headers CORS em arquivos estáticos
 app.use('/uploads', (req, res, next) => {
