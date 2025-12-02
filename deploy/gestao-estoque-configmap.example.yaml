@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gestao-estoque-env
+  labels:
+    io.kompose.service: gestao-estoque
+data:
+  # Porta da API
+  APP_PORT: "5011"
+
+  # URLs
+  BASE_URL: "https://gestaoestoque-api.app.fslab.dev"
+  FRONTEND_URL: "https://gestaoestoque.app.fslab.dev"
+
+  # MongoDB URLs
+  DB_URL: "mongodb://mongodb-gestao-estoque:27017/gestaoEstoque"
+  DB_URL_TEST: "mongodb://mongodb-gestao-estoque:27017/gestaoEstoque_teste"
+
+  # Ambiente
+  NODE_ENV: "production"
+  DEBUGLOG: "false"
+
+  # JWT Configurações
+  JWT_ACCESS_TOKEN_EXPIRATION: "1d"
+  JWT_PASSWORD_RECOVERY_EXPIRATION: "1h"
+  JWT_REFRESH_TOKEN_EXPIRATION: "7d"
+  JWT_SECRET_ACCESS_TOKEN: "<REPLACE_WITH_SECURE_VALUE>"
+  JWT_SECRET_PASSWORD_RECOVERY: "<REPLACE_WITH_SECURE_VALUE>"
+  JWT_SECRET_REFRESH_TOKEN: "<REPLACE_WITH_SECURE_VALUE>"
+  SINGLE_SESSION_REFRESH_TOKEN: "false"
+
+  # Mail Service (Mailsender-TS)
+  URL_MAIL_SERVICE: "https://seu-servico-mailsender.exemplo"
+  MAIL_API_KEY: "<REPLACE_WITH_MAIL_API_KEY>"
+  MAIL_API_TIMEOUT: "10000"
+
+  # Frontend Configuration
+  LOGO_URL: ""
+  COR_PRIMARIA: "#4F46E5"
+
+  # MongoDB Init
+  MONGO_INITDB_DATABASE: "gestaoEstoque"
+  MONGO_INITDB_ROOT_USERNAME: "<REPLACE_WITH_MONGO_ROOT_USER>"
+  MONGO_INITDB_ROOT_PASSWORD: "<REPLACE_WITH_MONGO_ROOT_PASSWORD>"
+
