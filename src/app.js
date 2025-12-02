@@ -47,7 +47,13 @@ app.use(helmet({
 // Habilitando CORS
 // app.use(cors());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:3001', 
+    'http://localhost:5173',
+    'https://estoque.app.fslab.dev',
+    'https://gestaoestoque.app.fslab.dev'
+  ],
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
