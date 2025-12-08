@@ -71,7 +71,7 @@ kind: Service
 metadata:
   labels:
     io.kompose.service: gestao-estoque-api
-  name: gestaoestoque-api
+  name: gestao-estoque-api
 spec:
   type: ClusterIP
   ports:
