@@ -45,19 +45,40 @@ app.use(helmet({
 }));
 
 // Habilitando CORS
-// app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000', 
+  'http://localhost:3001', 
+  'http://localhost:5173',
+  'https://garagehub.app.fslab.dev',
+  'https://gestao-estoque.app.fslab.dev',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+console.log('Origens CORS permitidas:', allowedOrigins);
+
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001', 
-    'http://localhost:5173',
-    'https://estoque.app.fslab.dev',
-    'https://gestaoestoque.app.fslab.dev'
-  ],
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: function (origin, callback) {
+    // Permite requisições sem origin (como mobile apps, Postman, etc)
+    if (!origin) {
+      console.log('CORS: Requisição sem origin (permitida)');
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log(`CORS: Origem permitida: ${origin}`);
+      callback(null, true);
+    } else {
+      console.log(`CORS: Origem bloqueada: ${origin}`);
+      console.log(`Origens permitidas:`, allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS', 'PUT'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
-  exposedHeaders: ['Content-Type', 'Content-Length']
+  exposedHeaders: ['Content-Type', 'Content-Length'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Habilitando a compressão de respostas
@@ -75,7 +96,10 @@ console.log(`Servindo arquivos estáticos de: ${publicPath}`);
 
 // Middleware para adicionar headers CORS em arquivos estáticos
 app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
